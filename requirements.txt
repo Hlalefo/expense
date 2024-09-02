@@ -1,0 +1,5 @@
+Flask
+tabula-py
+pandas
+requests
+python-dotenv
