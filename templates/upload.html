@@ -1,19 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload PDF</title>
+    <title>Upload PDF and Set Goals</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-    <h1>Upload your expense PDF</h1>
-    <form method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept="application/pdf">
-        <input type="submit" value="Upload">
+    <h1>Upload Your PDF File and Set Your Goals</h1>
+    <form id="upload-form" action="/" method="post" enctype="multipart/form-data">
+        <div>
+            <label for="file">Upload PDF:</label>
+            <input type="file" name="file" accept=".pdf" required>
+        </div>
+        <div>
+            <label for="expenses">What do you spend on monthly?</label>
+            <input type="text" name="expenses" required placeholder="e.g., Rent, Groceries, Utilities">
+        </div>
+        <div>
+            <label for="goal">What is your financial goal?</label>
+            <input type="text" name="goal" required placeholder="e.g., Save 25000 ZAR">
+        </div>
+        <button type="submit">Upload and Analyze</button>
     </form>
 
-    <h2>
-        Analysis data.
-    </h2>
-</body>
-</html>
+    <h2>Expense Analysis Outcomes</h2>
+    <div>
+        <canvas id="pie-chart"></canvas>
+        <canvas id="histogram-chart"></canvas>
+    </div>
+    <div id="analysis-outcome">
+    </div>
+
+    <script>
+        document.getElementById('upload-form').onsubmit = async function (event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const response = await fetch('/', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.redirected) {
+                const redirectUrl = new URL(response.url);
+                const feedbackUrl = `${redirectUrl.origin}/process/${redirectUrl.pathname.split('/').pop()}`;
+
+                fetch(feedbackUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayCharts(data.charts);
+                        displayOutcome(data.advice);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching feedback:', error);
+                    });
+            }
+        };
+
+        function displayCharts(charts) {
+            const pieCtx = document.getElementById('pie-chart').getContext('2d');
+            const histogramCtx = document.getElementById('histogram-chart').getContext('2d');
+
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Income', 'Expenses', 'Other'],
+                    datasets: [{
+                        label: 'Income vs Expenses',
+                        data: [charts.pie_data.income, charts.pie_data.expenses, charts.pie_data.other],
+                        backgroundColor: ['rgba(102, 179, 255, 0.7)', 'rgba(255, 153, 153, 0.7)', 'rgba(153, 255, 153, 0.7)'],
+                        borderColor: ['rgba(102, 179, 255, 1)', 'rgba(255, 153, 153, 1)', 'rgba(153, 255, 153, 1)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                                                legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (tooltipItem) {
+                                    return `${tooltipItem.label}: ${tooltipItem.raw} ZAR`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+                                                        // Assuming histogram data is provided in a format similar to this
+                                                        const histogramData = charts.histogram_data || [];
+                                                        new Chart(histogramCtx, {
+                                                            type: 'bar',
+                                                            data: {
+                                                                labels: histogramData.labels || [],
+                                                                datasets: [{
+                                                                    label: 'Expense Frequency',
+                                                                    data: histogramData.values || [],
+                                                                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                                                    borderColor: 'rgba(153, 102, 255, 1)',
+                                                                    borderWidth: 1
+                                                                }]
+                                                            },
+                                                            options: {
+                                                                responsive: true,
+                                                                plugins: {
+                                                                    legend: {
+                                                                        display: false
+                                                                    },
+                                                                    tooltip: {
+                                                                        callbacks: {
+                                                                            label: function (tooltipItem) {
+                                                                                return `Amount: ${tooltipItem.raw} ZAR`;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                },
+                                                                scales: {
+                                                                    x: {
+                                                                        beginAtZero: true
+                                                                    },
+                                                                    y: {
+                                                                        beginAtZero: true
+                                                                    }
+                                                                }
+                                                            }
+                                                        });
+                                                    }
+
+                                                    function displayOutcome(advice) {
+                                                        document.getElementById('analysis-outcome').innerText = advice;
+                                                    }
+                                                </script>
+    </body>
+    
+    </html>
